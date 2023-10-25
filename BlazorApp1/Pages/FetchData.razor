@@ -1,0 +1,78 @@
+﻿@page "/fetchdata"
+@using BlazorApp1.Data
+@inject WeatherForecastService ForecastService
+@inject ExportService exportService
+@inject Microsoft.JSInterop.IJSRuntime JS
+@inject NavigationManager NavigationManager
+@using System.IO;
+
+<PageTitle>Weather forecast</PageTitle>
+
+<h1>Weather forecast</h1>
+
+<p>This component demonstrates fetching data from a service.</p>
+
+@if (forecasts == null)
+{
+    <p><em>Loading...</em></p>
+}
+else
+{
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Date</th>
+                <th>Temp. (C)</th>
+                <th>Temp. (F)</th>
+                <th>Summary</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var forecast in forecasts)
+            {
+                <tr>
+                    <td>@forecast.Date.ToShortDateString()</td>
+                    <td>@forecast.TemperatureC</td>
+                    <td>@forecast.TemperatureF</td>
+                    <td>@forecast.Summary</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+
+    <button class="btn btn-primary" @onclick="@ExportToPdf">Export to PDF</button>
+}
+
+@code {
+    private WeatherForecast[]? forecasts;
+
+    protected override async Task OnInitializedAsync()
+    {
+        forecasts = await ForecastService.GetForecastAsync(DateOnly.FromDateTime(DateTime.Now));
+    }
+}
+@code {
+    private string currentUrl;
+    /// <summary>
+    /// Get the current URL
+    /// </summary>
+    protected override void OnInitialized()
+    {
+        currentUrl = NavigationManager.Uri;
+    }
+}
+
+@functions
+{
+    /// <summary>
+    /// Create and download the PDF document
+    /// </summary>
+    protected async Task ExportToPdf()
+    {
+        ExportService exportService = new ExportService();
+        using (MemoryStream excelStream = exportService.CreatePdf(currentUrl))
+        {
+            await JS.SaveAs("HTMLToPDF.pdf", excelStream.ToArray());
+        }
+    }
+}

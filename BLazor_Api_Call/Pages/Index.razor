@@ -1,0 +1,81 @@
+﻿@page "/"
+@using System.Net.Http.Json
+@using System.Net.Http.Headers
+@using System.Net
+@using Microsoft.JSInterop
+@inject HttpClient Http
+@inject IJSRuntime JSRuntime
+
+<div class="accordion">
+    <div class="accordion-item">
+        <h4 class="accordion-header" id="headingOne">
+            <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#collapseOne" aria-expanded="true" aria-controls="collapseOne">
+                HTML to PDF
+            </button>
+        </h4>
+        <div id="collapseOne" class="accordion-collapse collapse show" aria-labelledby="headingOne" data-bs-parent="#accordionExample">
+            <div class="accordion-body">
+                <div class="d-flex flex-column" align="center">
+                    <h3>Generate PDF from HTML template</h3>
+                    Dynamically generate PDF documents from an HTML template and JSON data.
+                    <div style="padding: 20px">
+                        <input type="text" @bind="url" placeholder="Enter URL" />
+                        <button type="button" class="btn btn-primary" @onclick="ConvertToPDF">Convert to PDF</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private string url = "";
+
+    private async Task ConvertToPDF()
+    {
+        try
+        {
+            if (!string.IsNullOrWhiteSpace(url))
+            {
+                // Send a POST request to the API to convert HTML to PDF using 'url'
+                var response = await Http.PostAsJsonAsync("https://localhost:7099/api/pdf/convertUrl", new { Url = url });
+
+                if (response.StatusCode == HttpStatusCode.OK)
+                {
+                    // Read the PDF content from the response
+                    byte[] pdfBytes = await response.Content.ReadAsByteArrayAsync();
+
+                    // Download the PDF using JavaScript Interop
+                    await DownloadPDF("converted.pdf", pdfBytes);
+                }
+                else
+                {
+                    Console.WriteLine("Server response was not OK: " + response.StatusCode); // Add this line for debugging
+                                                                                             // Handle the response when it's not OK
+                                                                                             // You can add error handling here if needed
+                }
+            }
+            else
+            {
+                Console.WriteLine("URL is empty or not provided."); // Add this line for debugging
+                                                                    // Handle the case where 'url' is empty or not provided
+                                                                    // You can display an error message or take appropriate action
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine("An exception occurred: " + ex.Message); // Add this line for debugging
+                                                                       // Handle any exceptions that may occur during the request
+                                                                       // You can log or display an error message
+        }
+    }
+
+    private async Task DownloadPDF(string fileName, byte[] pdfBytes)
+    {
+        Console.WriteLine($"Debug: fileName = {fileName}");
+        await JSRuntime.InvokeVoidAsync("window.blazorDownloadFile", Convert.ToBase64String(pdfBytes), fileName);
+
+    }
+
+
+}
